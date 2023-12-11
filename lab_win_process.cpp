@@ -1,69 +1,38 @@
-﻿#include <pthread.h>
-#include <Windows.h>
-#include <stdio.h>
 #include <iostream>
+#include <windows.h>
+#include <stdio.h>
+#include <tchar.h>
 
-#define SUCCESS 0
+int main(int argc, char* argv) {
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
 
-void* randomNumber(void* arg) {
-    // std::cout << "\nGenerate a new random number [0, 1) every 1 second" << std::endl;
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+    ZeroMemory(&pi, sizeof(pi));
 
-    clock_t TimeZero = clock();
-
-    double deltaTime = 0;
-    double secondsToDelay = 1;
-
-    srand(time(0));
-
-    while (1) {
-        deltaTime = (clock() - TimeZero) / CLOCKS_PER_SEC;
-        //std::cout << "\b" << secondsToDelay - deltaTime << "\b"; // timer
-
-        if (deltaTime > secondsToDelay) {
-            double i = rand() / (RAND_MAX + 1.);
-            std::cout << "\nNew random : " << i << " \n";
-
-            deltaTime = clock();
-            TimeZero = clock();
-        }
+    if (!CreateProcess(
+        L"D:\\SONIK\\Unik2\\OS\\lab_wind_signal\\lab_wind_signal\\x64\Debug\\lab_wind_signal.exe.recipe",
+        NULL,
+        NULL,
+        NULL,
+        FALSE,
+        CREATE_NEW_CONSOLE,    
+        NULL,
+        NULL,
+        &si,
+        &pi)
+        )
+    {
+        printf("CreateProcess failed (%d).\n", GetLastError());
     }
-    return SUCCESS;
-}
 
-void* readFromConsole(void* arg) {
-    while (1) {
-        // std::cout << "\nEnter your string: " << std::endl;
-        std::string s;
-        std::cin >> s;
-        std::reverse(s.begin(), s.end());
-        std::cout << "Reversed string: " << s << std::endl;;
-    }
-    return SUCCESS;
-}
+    WaitForSingleObject(pi.hProcess, INFINITE);
 
-BOOL handlerRoutine(DWORD ctrlType) {
-    if (ctrlType == CTRL_C_EVENT) {
-        return TRUE;
-    }
-    return FALSE;
-}
+    DWORD exitCode = 1;
+    GetExitCodeProcess(pi.hProcess, &exitCode);
+    std::cout << "Process ended with code: " << exitCode;
 
-int main() {
-    pthread_t thread1, thread2;
-    int status1, status2;
-    int status_addr1, status_addr2;
-
-    // create a thread
-    status1 = pthread_create(&thread1, NULL, randomNumber, NULL);
-    status2 = pthread_create(&thread2, NULL, readFromConsole, NULL);
-
-    // join threads
-    status1 = pthread_join(thread1, (void**)&status_addr1);
-    status2 = pthread_join(thread2, (void**)&status_addr2);
-
-    // command for getting signal "Ctrl + C"
-    SetConsoleCtrlHandler(handlerRoutine, TRUE);
-    while (1);
-
-    return 0;
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
 }
